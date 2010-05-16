@@ -66,6 +66,7 @@ class TreeDataLoader(filepath: String) {
                     if (line_counter % tree_degree_per_node == 0)
                         current_parent_node_in_tree = current_parent_node_in_tree + 1
             }
+            //println("Processing line " + line_counter)
             line_counter += 1
         }
 }
@@ -74,8 +75,14 @@ object Quantizer {
 
     def main(args: Array[String]) =  {
 
-        println("Starting service...")
-
+        var tree_data: TreeDataLoader = null
+        if (args.length != 1)
+            println("Usage: scala Quantizer <filepath to tree data>")
+        else {
+            println("Starting service...")
+            tree_data = new TreeDataLoader(args(0))
+            println("Tree data loaded.")
+        }
     }    
 }
 
