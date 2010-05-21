@@ -85,7 +85,8 @@ class TreeDataLoader(filepath: String) {
                     if (line_counter % tree_degree_per_node == 0)
                         current_parent_node_in_tree = current_parent_node_in_tree + 1
             }
-            println("Processing line " + line_counter)
+            if (line_counter % 100 == 0)
+                println("Processing line " + line_counter)
             line_counter += 1
         }
 }
