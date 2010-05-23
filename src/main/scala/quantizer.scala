@@ -14,7 +14,7 @@ case class MTree(id: Int, value: Array[Float], var children: List[MTree]) {
     }
     def calculateDistance(vector: Array[Float]): Float = {
         var distance: Float = 0.0f
-        for (i <- 0.to(value.length)) {
+        for (i <- 0.to(value.length - 1)) {
             distance = distance + Math.pow(value(i) - vector(i), 2).toFloat 
         }
         distance
@@ -75,7 +75,7 @@ class TreeDataLoader(filepath: String) {
                     } catch {
                         case _: java.lang.NumberFormatException => println("Error file format.")
                     }
-                case _ =>
+                case t =>
                     var node_value: Array[Float] = split_line.map( (s) => s.toFloat ).toArray
                     var new_node: MTree = null 
 
@@ -134,7 +134,7 @@ object Quantizer {
             while (!trace_tree.isLeaf()) {
                 trace_tree = trace_tree.findClosetNode(feature_point)
             }                
-            quantized_result = quantized_result + "vec" + trace_tree.id
+            quantized_result = quantized_result + " vec" + trace_tree.id
         }
 
         quantized_result 
