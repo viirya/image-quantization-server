@@ -6,6 +6,12 @@ import scala.io.Source
 
 case class MTree(id: Int, value: Array[Float], var children: List[MTree]) {
     def this(id: Int, value: Array[Float]) = this(id, value, List())
+    def isLeaf(): Boolean = {
+        if (children.length == 0)
+            true
+        else
+            false
+    }
     def calculateDistance(vector: Array[Float]): Float = {
         var distance: Float = 0.0f
         for (i <- 0.to(value.length)) {
@@ -93,7 +99,7 @@ class TreeDataLoader(filepath: String) {
 
 
 class Query(var values: List[Array[Float]]) {
-    def this() = this(List())
+    def this() = this(List())   
     def loadFromFile(filepath: String) = {
         var feature_dimension = 128
         var num_features = 0
@@ -119,6 +125,21 @@ class Query(var values: List[Array[Float]]) {
 
 object Quantizer {
 
+    def quantize(query: Query, tree: MTree): String = {
+
+        var quantized_result: String = ""
+        
+        for (feature_point <- query.values) {
+            var trace_tree = tree
+            while (!trace_tree.isLeaf()) {
+                trace_tree = trace_tree.findClosetNode(feature_point)
+            }                
+            quantized_result = quantized_result + "vec" + trace_tree.id
+        }
+
+        quantized_result 
+    }
+
     def main(args: Array[String]) =  {
 
         var tree_data: TreeDataLoader = null
@@ -133,6 +154,8 @@ object Quantizer {
             if (args.length == 2) {
                 query = new Query()
                 query.loadFromFile(args(1))
+            
+                println(quantize(query, tree_data.root))
             }            
         }
     }    
