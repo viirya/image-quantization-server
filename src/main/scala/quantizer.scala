@@ -89,7 +89,7 @@ class TreeDataLoader(filepath: String) {
                     } catch {
                         case _: java.lang.NumberFormatException => println("Error file format.")
                     }
-                case t if t < 100 =>
+                case t =>
                     var node_value: Array[Float] = split_line.map( (s) => s.toFloat ).toArray
                     var new_node: MTree = null 
 
@@ -104,7 +104,6 @@ class TreeDataLoader(filepath: String) {
                     current_pos_in_tree = current_pos_in_tree + 1
                     if (line_counter % tree_degree_per_node == 0)
                         current_parent_node_in_tree = current_parent_node_in_tree + 1
-                case _ => 
             }
             if (line_counter % 100 == 0)
                 println("Processing line " + line_counter)
