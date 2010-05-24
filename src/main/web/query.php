@@ -1,7 +1,29 @@
 <?php	
 
+include_once("inc/cbir.inc");
+
 $filename = get_convert_upload_image();
 extract_features($filename);
+$quantized_ret = quantize($filename);
+
+function quantize($filename) {
+
+    $features = implode('', file($filename . '.hes'));
+
+    $query_args = array(
+                "url" => "http://cml11.csie.ntu.edu.tw:5001/",
+                "post" => true,
+                "params" => array(
+                    "feature" => $features
+                )
+    );
+
+
+    $quantized_ret = query_cbir_service($query_args);
+    print_r($quantized_ret);
+    return $quantized_ret;
+
+}
 
 
 function get_convert_upload_image() {
