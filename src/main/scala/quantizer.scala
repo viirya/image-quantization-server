@@ -2,6 +2,20 @@
 package org.viirya.quantizer
 
 import scala.io.Source
+import scala.actors.Actor
+import scala.actors.Actor._
+
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.mortbay.jetty.Connector;
+import org.mortbay.jetty.Handler;
+import org.mortbay.jetty.HttpConnection;
+import org.mortbay.jetty.Request;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.bio.SocketConnector;
+import org.mortbay.jetty.handler.AbstractHandler;
 
 
 case class MTree(id: Int, value: Array[Float], var children: List[MTree]) {
@@ -123,6 +137,78 @@ class Query(var values: List[Array[Float]]) {
     }
 }
 
+
+abstract class cService {
+
+    def run()
+
+}
+
+class HttpService(val port: Int, val tree: MTree) extends cService {
+
+    class ServiceHandler extends AbstractHandler {
+
+        def handle(target: String, request: HttpServletRequest, response: HttpServletResponse, dispatch: Int) = {
+            var base_request: Request = null
+            if (request.isInstanceOf[Request]) 
+                base_request = request.asInstanceOf[Request]
+            else
+                base_request = HttpConnection.getCurrentConnection().getRequest()
+
+            val feature_filename: String = base_request.getParameter("filename")
+
+            if (feature_filename != null) {
+                println("To quantize features in " + feature_filename)
+
+                var query: Query = new Query()
+                query.loadFromFile(feature_filename)
+
+                val quantized_ret: String = Quantizer.quantize(query, tree)
+
+                println(quantized_ret)
+
+                base_request.setHandled(true)
+
+                response.setContentType("text/plain")
+                response.setStatus(HttpServletResponse.SC_OK)
+                response.getWriter().println(quantized_ret)
+                
+            }
+
+        }
+
+    }
+
+    def run() = {
+
+        println("Service started.....")
+
+        val server: Server = new Server()
+        val connector: Connector = new SocketConnector()
+        connector.setPort(port)
+        server.setConnectors(Array(connector))
+    
+        val handler: Handler = new ServiceHandler()
+        server.setHandler(handler)
+    
+        server.start()
+        server.join()
+    }
+
+}
+
+class ServiceRunner extends Actor {
+
+    def act() = {
+        loop {
+            react {
+                case s: cService => println("Starting service....."); s.run()
+            }
+        }
+    }
+
+}
+
 object Quantizer {
 
     def quantize(query: Query, tree: MTree): String = {
@@ -144,19 +230,24 @@ object Quantizer {
 
         var tree_data: TreeDataLoader = null
         if (args.length == 0)
-            println("Usage: scala Quantizer <filepath to tree data> [SIFT feature file]")
+            println("Usage: scala Quantizer <port> <filepath to tree data> [SIFT feature file]")
         else {
             println("Starting service...")
-            tree_data = new TreeDataLoader(args(0))
+            tree_data = new TreeDataLoader(args(1))
             println("Tree data loaded.")
 
             var query: Query = null
-            if (args.length == 2) {
+            if (args.length == 3) {
                 query = new Query()
-                query.loadFromFile(args(1))
+                query.loadFromFile(args(2))
             
                 println(quantize(query, tree_data.root))
-            }            
+            } else {
+                println("Running in service mode.....")
+                val service_runner = new ServiceRunner
+                service_runner.start
+                service_runner ! new HttpService(args(0).toInt, tree_data.root)
+            }
         }
     }    
 }
