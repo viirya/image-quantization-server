@@ -89,7 +89,7 @@ class TreeDataLoader(filepath: String) {
                     } catch {
                         case _: java.lang.NumberFormatException => println("Error file format.")
                     }
-                case t =>
+                case t if t < 100 =>
                     var node_value: Array[Float] = split_line.map( (s) => s.toFloat ).toArray
                     var new_node: MTree = null 
 
@@ -104,6 +104,7 @@ class TreeDataLoader(filepath: String) {
                     current_pos_in_tree = current_pos_in_tree + 1
                     if (line_counter % tree_degree_per_node == 0)
                         current_parent_node_in_tree = current_parent_node_in_tree + 1
+                case _ => 
             }
             if (line_counter % 100 == 0)
                 println("Processing line " + line_counter)
@@ -113,15 +114,43 @@ class TreeDataLoader(filepath: String) {
 
 
 class Query(var values: List[Array[Float]]) {
-    def this() = this(List())   
+
+    var feature_dimension = 128
+    var num_features = 0
+    var line_counter = 0
+ 
+    def this() = this(List()) 
+ 
+    def parse(read_line: String) = {
+        var line = read_line.stripLineEnd
+        var split_line: List[String] = List.fromString(line, ' ')
+        line_counter match {
+            case 0 => feature_dimension = split_line(0).toInt
+            case 1 => num_features = split_line(0).toInt
+            case _ =>
+                var feature: Array[Float] = split_line.map( (s) => s.toFloat ).toArray
+                values = feature :: values
+        }
+        println("line " + line_counter + " loaded.")
+        line_counter = line_counter + 1
+    }
+
+    def loadFromString(data: String) = {
+        num_features = 0
+        line_counter = 0
+        values = List()
+        List.fromString(data, '\n').foreach( parse(_) )
+    }
+      
     def loadFromFile(filepath: String) = {
-        var feature_dimension = 128
-        var num_features = 0
-        var line_counter = 0
+        num_features = 0
+        line_counter = 0
         values = List()
         Source.fromFile(filepath)
             .getLines
-            .foreach { read_line =>
+            .foreach( parse(_) )
+/*
+read_line =>
                 var line = read_line.stripLineEnd
                 var split_line: List[String] = List.fromString(line, ' ')
                 line_counter match {
@@ -134,6 +163,7 @@ class Query(var values: List[Array[Float]]) {
                 println("line " + line_counter + " loaded.")
                 line_counter = line_counter + 1
             }
+*/
     }
 }
 
@@ -156,24 +186,30 @@ class HttpService(val port: Int, val tree: MTree) extends cService {
                 base_request = HttpConnection.getCurrentConnection().getRequest()
 
             val feature_filename: String = base_request.getParameter("filename")
+            val feature: String = base_request.getParameter("feature")
+
+            var query: Query = new Query()
+            var quantized_ret: String = ""
 
             if (feature_filename != null) {
                 println("To quantize features in " + feature_filename)
-
-                var query: Query = new Query()
                 query.loadFromFile(feature_filename)
-
-                val quantized_ret: String = Quantizer.quantize(query, tree)
-
-                println(quantized_ret)
-
-                base_request.setHandled(true)
-
-                response.setContentType("text/plain")
-                response.setStatus(HttpServletResponse.SC_OK)
-                response.getWriter().println(quantized_ret)
+                quantized_ret = Quantizer.quantize(query, tree)
                 
+            } else if (feature != null) {
+                println("To quantize features.....")
+                query.loadFromString(feature)
+                quantized_ret = Quantizer.quantize(query, tree)
+
             }
+
+            println(quantized_ret)
+
+            base_request.setHandled(true)
+
+            response.setContentType("text/plain")
+            response.setStatus(HttpServletResponse.SC_OK)
+            response.getWriter().println(quantized_ret)
 
         }
 
