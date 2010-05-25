@@ -102,13 +102,42 @@ class TreeDataLoader(filepath: String) {
                     tree = tree ::: List(new_node)
 
                     current_pos_in_tree = current_pos_in_tree + 1
-                    if (line_counter % tree_degree_per_node == 0)
+                    if (line_counter % tree_degree_per_node == 0) {
                         current_parent_node_in_tree = current_parent_node_in_tree + 1
+                        //println("current parent: " + current_parent_node_in_tree + " line: " + line_counter)
+                    }
+
+                    //println(tree(current_parent_node_in_tree))
             }
             if (line_counter % 100 == 0)
                 println("Processing line " + line_counter)
             line_counter += 1
         }
+}
+
+
+object MetaDataLoader {
+
+    var mean_values: Array[Float] = null
+    var std_values: Array[Float] = null
+       
+    def load(filepath: String) = {
+
+        var line_counter = 0
+        Source.fromFile(filepath)
+            .getLines
+            .foreach { read_line =>
+                var line = read_line.stripLineEnd
+                var split_line: List[String] = List.fromString(line, ' ')
+                line_counter match {
+                    case 0 => mean_values = split_line.map( (s) => s.toFloat ).toArray
+                    case 1 => std_values = split_line.map( (s) => s.toFloat ).toArray
+                    case _ =>
+                }
+                line_counter = line_counter + 1
+            }
+    }
+
 }
 
 
@@ -127,8 +156,14 @@ class Query(var values: List[Array[Float]]) {
             case 0 => feature_dimension = split_line(0).toInt
             case 1 => num_features = split_line(0).toInt
             case _ =>
-                var feature: Array[Float] = split_line.map( (s) => s.toFloat ).toArray
-                values = feature :: values
+                var features: Array[Float] = split_line.drop(4).map( (s) => s.toFloat ).toArray
+                var normalized_features: Array[Float] = new Array[Float](features.length)
+                var dimension = 0
+                features.foreach { feature =>
+                    normalized_features(dimension) = (feature - MetaDataLoader.mean_values(dimension)) / MetaDataLoader.std_values(dimension)
+                    dimension = dimension + 1
+                }
+                values = values ::: List(normalized_features)
         }
         println("line " + line_counter + " loaded.")
         line_counter = line_counter + 1
@@ -265,16 +300,19 @@ object Quantizer {
 
         var tree_data: TreeDataLoader = null
         if (args.length == 0)
-            println("Usage: scala Quantizer <port> <filepath to tree data> [SIFT feature file]")
+            println("Usage: scala Quantizer <port> <filepath to tree data> <filepath to tree meta data> [SIFT feature file]")
         else {
             println("Starting service...")
             tree_data = new TreeDataLoader(args(1))
             println("Tree data loaded.")
 
+            MetaDataLoader.load(args(2))
+            println("Tree meta data loaded.")
+
             var query: Query = null
-            if (args.length == 3) {
+            if (args.length == 4) {
                 query = new Query()
-                query.loadFromFile(args(2))
+                query.loadFromFile(args(3))
             
                 println(quantize(query, tree_data.root))
             } else {
