@@ -106,7 +106,6 @@ class TreeDataLoader(filepath: String) {
                         current_parent_node_in_tree = current_parent_node_in_tree + 1
                         //println("current parent: " + current_parent_node_in_tree + " line: " + line_counter)
                     }
-
                     //println(tree(current_parent_node_in_tree))
             }
             if (line_counter % 100 == 0)
@@ -156,7 +155,7 @@ class Query(var values: List[Array[Float]]) {
             case 0 => feature_dimension = split_line(0).toInt
             case 1 => num_features = split_line(0).toInt
             case _ =>
-                var features: Array[Float] = split_line.drop(4).map( (s) => s.toFloat ).toArray
+                var features: Array[Float] = split_line.drop(5).map( (s) => s.toFloat ).toArray
                 var normalized_features: Array[Float] = new Array[Float](features.length)
                 var dimension = 0
                 features.foreach { feature =>
