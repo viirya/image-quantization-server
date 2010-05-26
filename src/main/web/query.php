@@ -1,10 +1,56 @@
 <?php	
 
 include_once("inc/cbir.inc");
+include_once("inc/xml_parser.inc");
 
 $filename = get_convert_upload_image();
 extract_features($filename);
 $quantized_ret = quantize($filename);
+$retrieved_ret = image_retrieval($quantized_ret, 100);
+display_image($retrieved_ret);
+print_r($retrieved_ret);
+
+
+function display_image($images) {
+
+    $base_url = "/~itv/thumbnails/";
+
+    $image_urls = array();
+
+    foreach ($images['results']['image'] as $image) {
+        $image_id = $image['id'];
+        $image_url = $base_url . $image_id . '_t.jpg';
+        $image_urls[] = $image_url;
+    }
+
+    foreach ($image_urls as $image_url) {
+        print "<img width=\"100\" height=\"100\" src=\"$image_url\" />";
+    }
+
+}
+
+function image_retrieval($features, $max = 100) {
+
+    $ret = '';
+
+    $query_args = array(
+                "url" => "http://cml10.csie.ntu.edu.tw:5000/",
+                "post" => true,
+                "params" => array(
+                    "feature" => $features,
+                    "max" => $max
+                )
+    );
+
+
+    $xml_ret = query_cbir_service($query_args);
+    if (!empty($xml_ret)) {
+        $parser = new xml_parser();
+        $ret = $parser->parse($xml_ret);
+    }
+
+    return $ret;
+}
 
 function quantize($filename) {
 
@@ -20,7 +66,7 @@ function quantize($filename) {
 
 
     $quantized_ret = query_cbir_service($query_args);
-    print_r($quantized_ret);
+    #print_r($quantized_ret);
     return $quantized_ret;
 
 }
