@@ -1,0 +1,15 @@
+
+An image feature quantization server written with Scala language
+================================================================
+
+Build
+-----
+
+sbt update
+sbt package
+
+Run
+---
+
+scala org.viirya.quantizer.Quantizer [port] [tree data] [tree meta data]
+
